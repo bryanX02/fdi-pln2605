@@ -1,0 +1,24 @@
+{
+  "Alias": [
+    "g05"
+  ],
+  "Buzon": {
+    "4bab562f-6d90-42d2-8fbf-893158c4f144": {
+      "remi": "Sistema",
+      "dest": "",
+      "asunto": "Bienvenido, g05!",
+      "cuerpo": "{\n  \"Alias\": [\n    \"g05\"\n  ],\n  \"Recursos\": {\n    \"piedra\": 5,\n    \"oro\": 0,\n    \"ladrillos\": 2\n  },\n  \"Objetivo\": {\n    \"ladrillos\": 5,\n    \"tela\": 3,\n    \"madera\": 3\n  }\n}",
+      "id": "4bab562f-6d90-42d2-8fbf-893158c4f144"
+    }
+  },
+  "Recursos": {
+    "piedra": 5,
+    "oro": 0,
+    "ladrillos": 2
+  },
+  "Objetivo": {
+    "ladrillos": 5,
+    "tela": 3,
+    "madera": 3
+  }
+}
