@@ -1,0 +1,146 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "register_agent",
+      "description": "Regista o alias de um agente na workstation.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nome/alias do agente."
+          }
+        },
+        "required": ["name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_info",
+      "description": "Obtém informações do posto de trabalho de um agente (alias, recursos, objetivo e buzón).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nome/alias do agente."
+          }
+        },
+        "required": ["name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_gente",
+      "description": "Obtém a lista de aliases conhecidos a partir da perspetiva de um agente.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nome/alias do agente que faz a consulta."
+          }
+        },
+        "required": ["name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_paquete",
+      "description": "Envia um pacote de recursos (madera, oro, etc.) para outro agente.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "dest": {
+            "type": "string",
+            "description": "Alias do destinatário do pacote."
+          },
+          "recursos": {
+            "type": "object",
+            "description": "Dicionário de recursos a enviar. Exemplo: {\"madera\": 4, \"oro\": 2}",
+            "additionalProperties": {
+              "type": "integer"
+            }
+          },
+          "agente": {
+            "type": "string",
+            "description": "Alias do agente remetente. Opcional: se omitido, o servidor pode usar o contexto de sessão.",
+            "nullable": true
+          }
+        },
+        "required": ["dest", "recursos"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_dashboard",
+      "description": "Obtém o HTML do dashboard de estado dos postos de trabalho.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "agente": {
+            "type": "string",
+            "description": "Alias do agente (se o servidor suportar modo multi-agente). Opcional.",
+            "nullable": true
+          }
+        },
+        "required": []
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "send_carta",
+      "description": "Envia uma carta (mensagem de texto) para o buzón de um destinatário.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "asunto": {
+            "type": "string",
+            "description": "Assunto da mensagem."
+          },
+          "cuerpo": {
+            "type": "string",
+            "description": "Conteúdo da mensagem."
+          },
+          "dest": {
+            "type": "string",
+            "description": "Alias do destinatário."
+          },
+          "remi": {
+            "type": "string",
+            "description": "Alias do remetente."
+          }
+        },
+        "required": ["asunto", "cuerpo", "dest", "remi"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "delete_carta",
+      "description": "Apaga uma carta do buzón através do seu identificador único (uid).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "uid": {
+            "type": "integer",
+            "description": "Identificador único da mensagem a eliminar."
+          }
+        },
+        "required": ["uid"]
+      }
+    }
+  }
+]
