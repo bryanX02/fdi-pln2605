@@ -15,6 +15,7 @@ dependencies = [
     "nltk>=3.9.3",
     "es-core-news-sm",
     "spacy>=3.8.11",
+    "pip>=26.0.1",
 ]
 
 [project.scripts]
