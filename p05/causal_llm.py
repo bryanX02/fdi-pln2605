@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 from torch.nn.functional import cross_entropy, softmax
 
-from p5.transformer import Transformer
+from p05.transformer import Transformer
 
 
 class CausalLLM(Transformer):

@@ -6,7 +6,7 @@
 import torch
 import torch.nn as nn
 
-from p5.attention import Attention
+from p05.attention import Attention
 
 
 class FeedForward(nn.Module):

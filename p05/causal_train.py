@@ -1,8 +1,3 @@
-# Entrenamiento de LLM causal en base a un corpus
-#
-# PLN 2025/2026 (FDI UCM)
-# Antonio F. G. Sevilla <afgs@ucm.es>
-
 import time
 
 import torch
@@ -30,22 +25,25 @@ class TextDataset(Dataset):
         return x, y
 
 
-def _make_dataloaders(tokens, context_size, batch_size, train_ratio=0.9):
+def _make_dataloaders(train_tokens, val_tokens, context_size, batch_size):
     """Los dataloaders se encargan de ir aportando pares para el entrenamiento,
-    incluyendo batching, mezcla aleatoria, etc."""
-    data = torch.tensor(tokens, dtype=torch.long)
+    incluyendo batching, mezcla aleatoria, etc.
 
-    # Separamos datos en entrenamiento y validación
-    split = int(train_ratio * len(data))
-    train_ds = TextDataset(data[:split], context_size)
-    val_ds = TextDataset(data[split:], context_size)
+    Recibe tokens de entrenamiento y validación por separado, permitiendo
+    combinar múltiples fuentes de datos con distintas políticas de split.
+    """
+    train_data = torch.tensor(train_tokens, dtype=torch.long)
+    val_data = torch.tensor(val_tokens, dtype=torch.long)
+
+    train_ds = TextDataset(train_data, context_size)
+    val_ds = TextDataset(val_data, context_size)
     logger.info(f"Train: {len(train_ds):,} muestras, Val: {len(val_ds):,}")
 
     # Los dataloaders implementan utilidades para el entrenamiento de
     # modelos. Devolvemos uno para train y otro para val
     return (
-        DataLoader(train_ds, batch_size=batch_size, shuffle=True),
-        DataLoader(val_ds, batch_size=batch_size),
+        DataLoader(train_ds, batch_size=batch_size, shuffle=True,num_workers=6, pin_memory=True),
+        DataLoader(val_ds, batch_size=batch_size, num_workers=6, pin_memory=True),
     )
 
 
@@ -93,20 +91,21 @@ def _run_epoch(model, dataloader, optimizer=None):
 
 def train(
     model,
-    tokens,
+    train_tokens,
+    val_tokens,
     epochs=5,
     context_size=128,
-    batch_size=64,
+    batch_size=256,
     lr=3e-4,
-    train_ratio=0.9,
 ):
     """Entrena el modelo de lenguaje causal sobre los tokens dados.
 
+    Recibe tokens de entrenamiento y validación por separado.
     Realiza `epochs` épocas de entrenamiento con AdamW, registrando train/val
     loss en cada época.
     """
 
-    train_dl, val_dl = _make_dataloaders(tokens, context_size, batch_size, train_ratio)
+    train_dl, val_dl = _make_dataloaders(train_tokens, val_tokens, context_size, batch_size)
 
     # El optimizador ajusta los parámetros que le pasamos en función del
     # gradiente (calculado con forward y backward) y la tasa de aprendizaje
@@ -127,34 +126,69 @@ def train(
 
 
 if __name__ == "__main__":
-    import sys
+    import glob
+    import os
 
-    from p5.causal_llm import CausalLLM
-    from p5.corpus import load_corpus
-    from p5.tokenizer import BPETokenizer
-
-    corpus = sys.argv[1] if len(sys.argv) > 1 else "alicia"
-    text = load_corpus(corpus)
+    from p05.causal_llm import CausalLLM
+    from p05.tokenizer import BPETokenizer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    VOCAB_SIZE = 300
-    CONTEXT_SIZE = 128
+    VOCAB_SIZE = 600
+    CONTEXT_SIZE = 200
+    TRAIN_RATIO = 0.9
 
-    tokenizer = BPETokenizer(text, vocab_size=VOCAB_SIZE)
-    tokens = tokenizer.encode(text)
+    # --- Cargar textos de alicia/ (train + validación) ---
+    alicia_files = sorted(glob.glob(os.path.join("alicia", "*.txt")))
+    alicia_text = ""
+    for path in alicia_files:
+        with open(path, encoding="utf-8") as f:
+            alicia_text += f.read() + "\n"
+    logger.info(f"alicia/: {len(alicia_files)} fichero(s), {len(alicia_text):,} caracteres")
+
+    # --- Cargar textos de new txt/ (solo train) ---
+    newtxt_files = sorted(glob.glob(os.path.join("new txt", "*.txt")))
+    newtxt_text = ""
+    for path in newtxt_files:
+        with open(path, encoding="utf-8") as f:
+            newtxt_text += f.read() + "\n"
+    logger.info(f"new txt/: {len(newtxt_files)} fichero(s), {len(newtxt_text):,} caracteres")
+
+    # Entrenamos el tokenizador sobre todo el texto disponible
+    all_text = alicia_text + newtxt_text
+    tokenizer = BPETokenizer(all_text, vocab_size=VOCAB_SIZE)
+
+    # Tokens de alicia/ → split train/val
+    alicia_tokens = tokenizer.encode(alicia_text)
+    split = int(TRAIN_RATIO * len(alicia_tokens))
+    alicia_train_tokens = alicia_tokens[:split]
+    alicia_val_tokens = alicia_tokens[split:]
+
+    # Tokens de new txt/ → solo train
+    newtxt_train_tokens = tokenizer.encode(newtxt_text)[:300000]
+
+    # Combinamos los tokens de entrenamiento
+    train_tokens = alicia_train_tokens + newtxt_train_tokens
+    val_tokens = alicia_val_tokens
+
+    logger.info(
+        f"Tokens — train: {len(train_tokens):,} "
+        f"(alicia {len(alicia_train_tokens):,} + new txt {len(newtxt_train_tokens):,}), "
+        f"val: {len(val_tokens):,} (alicia)"
+    )
 
     model = CausalLLM(
         vocab_size=tokenizer.vocab_size,
         max_seq_len=CONTEXT_SIZE,
-        d_model=128,
+        d_model=200,
         n_heads=4,
-        n_layers=4,
+        n_layers=6,=1
         expansion=4,
         dropout=0.1,
     ).to(device)
 
-    train(model, tokens, epochs=5, context_size=CONTEXT_SIZE)
+    train(model, train_tokens, val_tokens, epochs=5, context_size=CONTEXT_SIZE)
+    torch.save(model.state_dict(), "model.pt")
 
     prompt = "alice and the cat were studying for the exam. what "
     pred = model.generate(tokenizer.encode(prompt), max_tokens=200)
